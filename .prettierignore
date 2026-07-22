@@ -1,0 +1,34 @@
+# 忽略格式化的目录和文件
+node_modules
+dist
+build
+coverage
+
+# 忽略特定类型的文件
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.eot
+*.ttf
+*.woff
+*.woff2
+*.mp4
+*.webm
+*.ogg
+*.mp3
+*.wav
+*.flac
+*.aac
+
+# 忽略锁定文件
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 其他忽略
+.DS_Store
+.idea
+.vscode
