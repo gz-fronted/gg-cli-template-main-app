@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
-import { ConfigProvider } from '@chenhui996/gg-ui';
+import { ConfigProvider } from 'gz-ui-web';
 import { router } from '@/router';
 import 'antd/dist/reset.css';
 import './style.less';
@@ -30,7 +30,7 @@ Garfish.run({
 });
 
 createRoot(document.getElementById('root')!).render(
-  <ConfigProvider theme={{ cssVar: { key: 'main-app' }, hashed: false }} mode="light">
+  <ConfigProvider cssVarScope="main-app" theme={{ hashed: false }} themeMode="gold-light">
     <RouterProvider router={router} />
   </ConfigProvider>
 );
