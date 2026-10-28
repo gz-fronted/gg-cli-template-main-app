@@ -36,7 +36,7 @@ export default function Login() {
       
       // 2. 跳转回原本的页面
       navigate(from, { replace: true });
-    } catch (error) {
+    } catch {
       message.error('登录失败，请重试');
     } finally {
       setLoading(false);

@@ -1,48 +1,21 @@
-import { defineConfig } from 'vitest/config'
-import react, { reactCompilerPreset } from '@vitejs/plugin-react'
-import babel from '@rolldown/plugin-babel'
-import path from 'path'
-import { visualizer } from 'rollup-plugin-visualizer'
-// import cdn from 'vite-plugin-cdn-import'
+import { defineConfig } from 'vitest/config';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
+import path from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    // 暂时注释 CDN 抽离配置，因为内网环境暂不支持
-    /*
-    cdn({
-      modules: [
-        {
-          name: 'react',
-          var: 'React',
-          path: `https://unpkg.com/react@19.2.4/umd/react.production.min.js`,
-        },
-        {
-          name: 'react-dom',
-          var: 'ReactDOM',
-          path: `https://unpkg.com/react-dom@19.2.4/umd/react-dom.production.min.js`,
-        },
-        {
-          name: 'dayjs',
-          var: 'dayjs',
-          path: `https://unpkg.com/dayjs@1.11.10/dayjs.min.js`,
-        },
-        {
-          name: 'antd',
-          var: 'antd',
-          path: `https://unpkg.com/antd@6.3.3/dist/antd.min.js`,
-        }
-      ]
-    }),
-    */
     babel({ presets: [reactCompilerPreset()] }),
-    process.env.ANALYZE === 'true' && visualizer({
-      open: true,
-      gzipSize: true,
-      brotliSize: true,
-      filename: 'dist/stats.html',
-    }),
+    process.env.ANALYZE === 'true' &&
+      visualizer({
+        open: true,
+        gzipSize: true,
+        brotliSize: true,
+        filename: 'dist/stats.html',
+      }),
   ],
   resolve: {
     alias: {
@@ -69,7 +42,11 @@ export default defineConfig({
         // 手动分包策略
         manualChunks(id) {
           // 1. 将 react 核心全家桶打包到一起
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router-dom')
+          ) {
             return 'vendor-react';
           }
           // 2. 将 echarts 单独打包 (体积较大)
@@ -102,4 +79,4 @@ export default defineConfig({
       exclude: ['node_modules/', 'src/setupTests.ts', 'dist/'],
     },
   },
-})
+});

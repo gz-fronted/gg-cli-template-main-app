@@ -1,4 +1,4 @@
-import { Input, Tag, Card, Row, Col, List, Button, Typography, Space } from 'antd';
+import { Input, Tag, Card, Row, Col, Button, Typography } from 'antd';
 import {
   ArrowUpOutlined,
   AppstoreOutlined,

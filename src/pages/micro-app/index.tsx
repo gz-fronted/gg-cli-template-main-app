@@ -1,12 +1,6 @@
+import MicroAppHost from '@/components/MicroAppHost';
+import { reactMicroApp } from '@/micro-apps/bootstrap';
+
 export default function MicroApp() {
-  return (
-    <div
-      id="subApp"
-      style={{
-        width: '100%',
-        height: '100%',
-        minHeight: '400px',
-      }}
-    />
-  );
+  return <MicroAppHost definition={reactMicroApp} />;
 }

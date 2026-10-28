@@ -5,6 +5,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { message } from 'antd';
 import { useGlobalStore } from '@/store/useGlobalStore';
+import { clearSessionAndNavigate } from '@/micro-apps/session';
 
 // 定义通用的后端响应结构
 export interface BaseResponse<T = unknown> {
@@ -54,8 +55,9 @@ function createRequest(config: AxiosRequestConfig) {
           case 401:
             message.error('登录状态已过期，请重新登录');
             // 清除登录状态并跳转到登录页
-            useGlobalStore.getState().clearLoginState();
-            window.location.href = '/login';
+            void clearSessionAndNavigate(() => {
+              window.location.href = '/login';
+            });
             break;
           case 403:
             message.error('拒绝访问');
@@ -84,7 +86,8 @@ function createRequest(config: AxiosRequestConfig) {
      * @param config Axios 配置
      */
     get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-      return instance.get(url, config);
+      // 响应拦截器已返回业务 data；Axios 声明仍按原始响应推导。
+      return instance.get(url, config) as Promise<T>;
     },
     /**
      * 发送 POST 请求
@@ -93,13 +96,13 @@ function createRequest(config: AxiosRequestConfig) {
      * @param config Axios 配置
      */
     post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
-      return instance.post(url, data, config);
+      return instance.post(url, data, config) as Promise<T>;
     },
     put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
-      return instance.put(url, data, config);
+      return instance.put(url, data, config) as Promise<T>;
     },
     delete: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-      return instance.delete(url, config);
+      return instance.delete(url, config) as Promise<T>;
     },
   };
 }

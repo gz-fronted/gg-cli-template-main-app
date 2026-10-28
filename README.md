@@ -35,11 +35,10 @@ src/
 ├── router/             # 路由配置
 │   └── index.tsx       # 路由表定义
 ├── store/              # 全局状态管理 (Zustand - 仅存 Auth/App 等跨页面级状态)
-│   └── user.ts         # 例：user.ts、permission.ts
+│   └── useGlobalStore.ts # 登录态与全局状态
 ├── utils/              # 全局工具函数及基础设施
 │   └── request/        # 例：Axios 二次封装
 ├── main.tsx            # 应用入口
-├── App.tsx             # 根组件
 └── vite-env.d.ts       # Vite 环境变量类型声明
 ```
 
@@ -47,7 +46,7 @@ src/
 
 ### 1. 环境准备
 
-确保您的本地环境已安装 Node.js (推荐 v18+)。
+使用 Node.js 22.12+（建议 22 LTS）；同时支持 Node.js 20.19+。
 
 ### 2. 安装依赖
 
@@ -67,7 +66,7 @@ npm run dev
 
 浏览器访问 `http://localhost:5173` 即可看到效果。
 
-### 3. 构建生产环境
+### 4. 构建生产环境
 
 ```bash
 # 构建测试环境
@@ -129,7 +128,7 @@ npm run analyze
 ### 2. 样式开发
 
 项目支持 **Less** 预处理器。
-- **全局样式**: 修改 `src/index.css` 或配置 `src/main.tsx` 中的 Ant Design Token。
+- **全局样式**: 修改 `src/style.less` 或配置 `src/main.tsx` 中的 Ant Design Token。
 - **组件样式**: 推荐使用 `.less` 文件，并在组件中引入。
   ```less
   // src/pages/home/index.less
