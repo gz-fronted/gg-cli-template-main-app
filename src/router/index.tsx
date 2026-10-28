@@ -7,8 +7,6 @@ import { createBrowserRouter } from 'react-router-dom';
 import { Spin } from 'antd';
 import BasicLayout from '@/layouts/BasicLayout';
 import AuthRoute from '@/components/AuthRoute';
-import MicroAppHost from '@/components/MicroAppHost';
-import { reactMicroApp } from '@/micro-apps/bootstrap';
 
 // 路由懒加载配置
 const Login = lazy(() => import('@/pages/login'));
@@ -19,6 +17,7 @@ const Workspace = lazy(() => import('@/pages/workspace'));
 const Calendar = lazy(() => import('@/pages/calendar'));
 const Settings = lazy(() => import('@/pages/settings'));
 const NotFound = lazy(() => import('@/pages/404'));
+const MicroApp = lazy(() => import('@/pages/micro-app'));
 
 // 全局 Loading 组件
 const Loading = () => (
@@ -86,7 +85,7 @@ export const router = createBrowserRouter([
       // 子应用路由：匹配所有 /micro-react-1 及之后的路径
       {
         path: 'micro-react-1/*',
-        element: <MicroAppHost definition={reactMicroApp} />,
+        element: withSuspense(MicroApp),
       },
       // 404 页面配置
       {
