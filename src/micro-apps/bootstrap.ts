@@ -38,6 +38,11 @@ export function cleanupMicroAppRuntime(): Promise<void> {
   return work;
 }
 
+/** 真正卸载活动及空闲实例，等待清理完成；保留登录态订阅供后续会话使用。 */
+export function disposeGarfishRuntimeCache(): Promise<void> {
+  return cleanupMicroAppRuntime();
+}
+
 export function initializeMicroApps(): void {
   if (unsubscribe) return;
   // 挂载由 React 路由容器负责，不再同时配置 activeWhen 自动调度。
