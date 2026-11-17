@@ -101,3 +101,24 @@ it('rejects inactive and external child route messages', async () => {
   );
   await waitFor(() => expect(screen.getByTestId('a').textContent).toBe('true:/detail?id=3'));
 });
+
+it('unmounts an evicted panel while retaining its tab and restores it on activation', async () => {
+  const definition = { name: 'a', basename: '/a', entry: '/a.html' };
+  useMicroAppTabs.getState().visit(definition, '/detail?id=7');
+  for (let i = 0; i < 10; i++)
+    useMicroAppTabs
+      .getState()
+      .visit({ name: `extra-${i}`, basename: `/extra-${i}`, entry: '/entry' }, '/');
+  render(
+    <MemoryRouter initialEntries={['/']}>
+      <MicroAppTabs />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByTestId('a')).toBeNull();
+  expect(screen.getByText('a')).toBeTruthy();
+  fireEvent.click(screen.getByText('a'));
+  await waitFor(() => expect(screen.getByTestId('a').textContent).toBe('true:/detail?id=7'));
+  expect(screen.queryByTestId('extra-0')).toBeNull();
+  expect(screen.getByText('extra-0')).toBeTruthy();
+  expect(useMicroAppTabs.getState().tabs).toHaveLength(11);
+});

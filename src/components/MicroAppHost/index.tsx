@@ -1,3 +1,4 @@
+import { hostBridge } from '@/integration/host-bridge/hostBridge';
 import { notifyMicroAppRoute } from '@/micro-apps/routes';
 import { RefreshRequiredError } from '@/micro-apps/diagnostics';
 import { isResourceLoadError, reloadPage } from '@/components/ErrorBoundary/resourceLoadError';
@@ -32,6 +33,13 @@ export default function MicroAppHost({
     setError(undefined);
     setReloadRequired(false);
     setLoading(true);
+    const unregister = hostBridge.registerSubAppTarget({
+      appId: definition.name,
+      tabId: definition.name,
+      kind: 'garfish',
+      targetOrigin: window.location.origin,
+      getWindow: () => window,
+    });
     const lease = microAppRuntime.attach(definition, host);
     void lease.ready.then(
       () => {
@@ -39,6 +47,7 @@ export default function MicroAppHost({
       },
       (reason: unknown) => {
         if (!cancelled) {
+          unregister();
           setLoading(false);
           setReloadRequired(reason instanceof RefreshRequiredError || isResourceLoadError(reason));
           setError(reason instanceof Error ? reason.message : '子应用加载失败');
@@ -51,6 +60,7 @@ export default function MicroAppHost({
 
     return () => {
       cancelled = true;
+      unregister();
       void lease.release().catch(reportMicroAppError);
     };
   }, [definition, user, token, attempt]);

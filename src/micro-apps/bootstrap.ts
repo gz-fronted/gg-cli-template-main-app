@@ -1,3 +1,4 @@
+import { hostBridge } from '@/integration/host-bridge/hostBridge';
 import { useMicroAppTabs } from './tabs';
 import Garfish from 'garfish';
 import { create } from 'zustand';
@@ -66,6 +67,7 @@ export function initializeMicroApps(): void {
   if (!Garfish.running) Garfish.run({ basename: '/', disablePreloadApp: true });
   unsubscribe = useGlobalStore.subscribe((state, previous) => {
     if (state.token !== previous.token || state.user !== previous.user) {
+      hostBridge.clearSubAppTargets();
       useMicroAppTabs.getState().reset();
       void cleanupMicroAppRuntime().catch(reportMicroAppError);
     }
@@ -73,6 +75,7 @@ export function initializeMicroApps(): void {
 }
 
 export function disposeMicroApps(): Promise<void> {
+  hostBridge.stop();
   unsubscribe?.();
   unsubscribe = undefined;
   return cleanupMicroAppRuntime();

@@ -1,3 +1,6 @@
+import { hostBridge } from '@/integration/host-bridge/hostBridge';
+import { registerHostHandlers } from '@/integration/host-bridge/handlers';
+import { clearSessionAndNavigate } from '@/micro-apps/session';
 import { useEffect } from 'react';
 import { Tabs } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,6 +13,7 @@ export default function MicroAppTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const tabs = useMicroAppTabs((state) => state.tabs);
+  const panelCacheOrder = useMicroAppTabs((state) => state.panelCacheOrder);
   const match = matchMicroApp(
     location.pathname,
     location.search,
@@ -18,6 +22,36 @@ export default function MicroAppTabs() {
   );
   const name = match?.definition.name;
   const routePath = match?.routePath;
+  useEffect(() => {
+    hostBridge.start();
+    const unregister = registerHostHandlers(hostBridge, {
+      logout: (redirect) => clearSessionAndNavigate(() => navigate(redirect, { replace: true })),
+      navigate: (appId, path) => {
+        const app = microAppDefinitions.find((item) => item.name === appId);
+        if (app) navigate(`${app.basename}${path}`);
+      },
+      close: (appId) => {
+        const state = useMicroAppTabs.getState();
+        state.close(appId);
+        if (name === appId) {
+          const next = useMicroAppTabs.getState().tabs.at(-1);
+          navigate(next ? `${next.definition.basename}${next.routePath}` : '/', { replace: true });
+        }
+      },
+      consume: (appId, keys) => {
+        const state = useMicroAppTabs.getState();
+        const tab = state.tabs.find((item) => item.definition.name === appId);
+        if (!tab) return;
+        const url = new URL(tab.routePath, window.location.origin);
+        keys.forEach((key) => url.searchParams.delete(key));
+        const path = url.pathname + url.search + url.hash;
+        state.updateRoute(appId, path);
+        if (name === appId) navigate(`${tab.definition.basename}${path}`, { replace: true });
+      },
+    });
+    return unregister;
+  }, [navigate, name]);
+
   useEffect(() => {
     if (name && routePath) {
       const definition = microAppDefinitions.find((app) => app.name === name)!;
@@ -73,19 +107,21 @@ export default function MicroAppTabs() {
           }}
         />
       )}
-      {tabs.map((tab) => (
-        <div
-          key={tab.definition.name}
-          hidden={tab.definition.name !== name}
-          style={{ height: '100%' }}
-        >
-          <MicroAppHost
-            definition={tab.definition}
-            routePath={tab.definition.name === name ? routePath! : tab.routePath}
-            active={tab.definition.name === name}
-          />
-        </div>
-      ))}
+      {tabs
+        .filter((tab) => panelCacheOrder.includes(tab.definition.name))
+        .map((tab) => (
+          <div
+            key={tab.definition.name}
+            hidden={tab.definition.name !== name}
+            style={{ height: '100%' }}
+          >
+            <MicroAppHost
+              definition={tab.definition}
+              routePath={tab.definition.name === name ? routePath! : tab.routePath}
+              active={tab.definition.name === name}
+            />
+          </div>
+        ))}
     </>
   );
 }
