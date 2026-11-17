@@ -1,3 +1,4 @@
+import { microAppDefinitions } from '@/micro-apps/bootstrap';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 /**
  * 路由配置 (React Router Data API)
@@ -18,7 +19,6 @@ const Workspace = lazy(() => import('@/pages/workspace'));
 const Calendar = lazy(() => import('@/pages/calendar'));
 const Settings = lazy(() => import('@/pages/settings'));
 const NotFound = lazy(() => import('@/pages/404'));
-const MicroApp = lazy(() => import('@/pages/micro-app'));
 
 // 全局 Loading 组件
 const Loading = () => (
@@ -86,10 +86,7 @@ export const router = createBrowserRouter([
         element: withSuspense(Settings),
       },
       // 子应用路由：匹配所有 /micro-react-1 及之后的路径
-      {
-        path: 'micro-react-1/*',
-        element: withSuspense(MicroApp),
-      },
+      ...microAppDefinitions.map((app) => ({ path: `${app.basename.slice(1)}/*`, element: null })),
       // 404 页面配置
       {
         path: '*',

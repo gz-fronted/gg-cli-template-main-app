@@ -1,3 +1,4 @@
+import { notifyMicroAppRoute } from '@/micro-apps/routes';
 import { RefreshRequiredError } from '@/micro-apps/diagnostics';
 import { isResourceLoadError, reloadPage } from '@/components/ErrorBoundary/resourceLoadError';
 import { useEffect, useRef, useState } from 'react';
@@ -6,7 +7,15 @@ import { useGlobalStore } from '@/store/useGlobalStore';
 import { microAppRuntime, reportMicroAppError } from '@/micro-apps/bootstrap';
 import type { MicroAppDefinition } from '@/micro-apps/runtime';
 
-export default function MicroAppHost({ definition }: { definition: MicroAppDefinition }) {
+export default function MicroAppHost({
+  definition,
+  routePath = '/',
+  active = true,
+}: {
+  definition: MicroAppDefinition;
+  routePath?: string;
+  active?: boolean;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string>();
   const [reloadRequired, setReloadRequired] = useState(false);
@@ -36,11 +45,19 @@ export default function MicroAppHost({ definition }: { definition: MicroAppDefin
         }
       },
     );
+    useEffect(() => {
+      if (!loading && !error && active) notifyMicroAppRoute(definition, routePath);
+    }, [definition, routePath, active, loading, error]);
+
     return () => {
       cancelled = true;
       void lease.release().catch(reportMicroAppError);
     };
   }, [definition, user, token, attempt]);
+
+  useEffect(() => {
+    if (!loading && !error && active) notifyMicroAppRoute(definition, routePath);
+  }, [definition, routePath, active, loading, error]);
 
   return (
     <div style={{ height: '100%', minHeight: 0 }}>

@@ -1,3 +1,4 @@
+import { useMicroAppTabs } from './tabs';
 import Garfish from 'garfish';
 import { create } from 'zustand';
 import { useGlobalStore } from '@/store/useGlobalStore';
@@ -9,9 +10,22 @@ export const reactMicroApp: MicroAppDefinition = {
   entry: import.meta.env.VITE_MICRO_APP_REACT_ENTRY ?? '',
 };
 
+export const microAppDefinitions = [reactMicroApp];
+
 export const microAppRuntime = createMicroAppRuntime((definition) => {
   const { user, token } = useGlobalStore.getState();
-  return { globalState: { user, token, basename: definition.basename, contentOnly: true } };
+  return {
+    globalState: {
+      user,
+      token,
+      basename: definition.basename,
+      appId: definition.name,
+      routePath:
+        useMicroAppTabs.getState().tabs.find((tab) => tab.definition.name === definition.name)
+          ?.routePath ?? '/',
+      contentOnly: true,
+    },
+  };
 });
 
 export function reportMicroAppError(error: unknown): void {
@@ -52,6 +66,7 @@ export function initializeMicroApps(): void {
   if (!Garfish.running) Garfish.run({ basename: '/', disablePreloadApp: true });
   unsubscribe = useGlobalStore.subscribe((state, previous) => {
     if (state.token !== previous.token || state.user !== previous.user) {
+      useMicroAppTabs.getState().reset();
       void cleanupMicroAppRuntime().catch(reportMicroAppError);
     }
   });
