@@ -54,10 +54,6 @@ export default function MicroAppHost({
         }
       },
     );
-    useEffect(() => {
-      if (!loading && !error && active) notifyMicroAppRoute(definition, routePath);
-    }, [definition, routePath, active, loading, error]);
-
     return () => {
       cancelled = true;
       unregister();

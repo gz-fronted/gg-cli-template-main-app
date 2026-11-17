@@ -103,3 +103,14 @@ describe('runtime lifecycle', () => {
     expect(Garfish.loadApp).toHaveBeenCalledTimes(1);
   });
 });
+
+it('requires reload when a failed mount is still retained by Garfish', async () => {
+  const app = fakeApp();
+  app.mount.mockResolvedValue(false);
+  vi.mocked(Garfish.loadApp).mockResolvedValue(app as never);
+  Garfish.activeApps.push(app as never);
+  try {
+    const runtime = createMicroAppRuntime(() => ({}));
+    await expect(runtime.attach(definition, host()).ready).rejects.toBeInstanceOf(RefreshRequiredError);
+  } finally { Garfish.activeApps.length = 0; document.body.replaceChildren(); }
+});

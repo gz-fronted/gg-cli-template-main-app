@@ -158,8 +158,9 @@ export function createMicroAppRuntime(
         if (slot) {
           try {
             remove(slot);
-          } catch (cleanupError) {
-            throw new AggregateError([error, cleanupError], '子应用操作及清理失败');
+          } catch {
+            recordLifecycle(definition.name, 'error');
+            throw new RefreshRequiredError('子应用操作及清理失败，请刷新主应用后重试');
           }
         }
         recordLifecycle(definition.name, 'error');
