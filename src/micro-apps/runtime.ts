@@ -90,6 +90,13 @@ export function createMicroAppRuntime(
   }
 
   function attach(definition: MicroAppDefinition, host: HTMLElement) {
+    // 封锁后不再向阻塞队列追加任务，也不为拒绝的挂载保留宿主或安排清理。
+    if (blocked) {
+      return {
+        ready: Promise.reject<void>(new RefreshRequiredError()),
+        release: () => Promise.resolve(),
+      };
+    }
     const owner = Symbol(definition.name);
     const version = sessionVersion;
     let cancelled = false;

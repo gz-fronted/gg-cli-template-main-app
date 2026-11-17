@@ -36,9 +36,9 @@ const Loading = () => (
 );
 
 // 包装懒加载组件，统一添加 Suspense
-function withSuspense(Component: LazyExoticComponent<ComponentType<any>>) {
+function withSuspense(Component: LazyExoticComponent<ComponentType<any>>, pageKey: string) {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary key={pageKey}>
       <Suspense fallback={<Loading />}>
         <Component />
       </Suspense>
@@ -49,7 +49,7 @@ function withSuspense(Component: LazyExoticComponent<ComponentType<any>>) {
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: withSuspense(Login),
+    element: withSuspense(Login, 'login'),
   },
   {
     path: '/',
@@ -63,34 +63,34 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true, // 默认子路由 (首页)
-        element: withSuspense(Home),
+        element: withSuspense(Home, 'home'),
       },
       {
         path: 'dashboard',
-        element: withSuspense(Dashboard),
+        element: withSuspense(Dashboard, 'dashboard'),
       },
       {
         path: 'about',
-        element: withSuspense(About),
+        element: withSuspense(About, 'about'),
       },
       {
         path: 'workspace',
-        element: withSuspense(Workspace),
+        element: withSuspense(Workspace, 'workspace'),
       },
       {
         path: 'calendar',
-        element: withSuspense(Calendar),
+        element: withSuspense(Calendar, 'calendar'),
       },
       {
         path: 'settings',
-        element: withSuspense(Settings),
+        element: withSuspense(Settings, 'settings'),
       },
       // 子应用路由：匹配所有 /micro-react-1 及之后的路径
       ...microAppDefinitions.map((app) => ({ path: `${app.basename.slice(1)}/*`, element: null })),
       // 404 页面配置
       {
         path: '*',
-        element: withSuspense(NotFound),
+        element: withSuspense(NotFound, 'not-found'),
       },
     ],
   },

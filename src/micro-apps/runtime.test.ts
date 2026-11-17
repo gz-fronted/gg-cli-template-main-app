@@ -89,6 +89,42 @@ describe('runtime lifecycle', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(app.unmount).toHaveBeenCalledTimes(1);
   });
+  it('rejects new leases immediately after timeout without queuing their cleanup', async () => {
+    const pending = deferred<boolean>();
+    const app = fakeApp();
+    app.mount.mockImplementation(async () => {
+      await pending.promise;
+      app.mounted = true;
+      return true;
+    });
+    vi.mocked(Garfish.loadApp).mockResolvedValue(app as never);
+    const runtime = createMicroAppRuntime(() => ({}), { loadTimeoutMs: 100 });
+    const first = runtime.attach(definition, host());
+    const timeout = expect(first.ready).rejects.toBeInstanceOf(RefreshRequiredError);
+    await vi.advanceTimersByTimeAsync(100);
+    await timeout;
+
+    try {
+      for (let i = 0; i < 3; i++) {
+        let rejection: unknown;
+        const next = runtime.attach(definition, host());
+        void next.ready.catch((error: unknown) => {
+          rejection = error;
+        });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(rejection).toBeInstanceOf(RefreshRequiredError);
+        await next.release();
+        expect(vi.getTimerCount()).toBe(0);
+      }
+      expect(Garfish.loadApp).toHaveBeenCalledTimes(1);
+      expect(app.unmount).not.toHaveBeenCalled();
+    } finally {
+      pending.resolve(true);
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(app.unmount).toHaveBeenCalledTimes(1);
+  });
   it('retains failed unmounts in the capacity budget', async () => {
     const app = fakeApp();
     app.unmount.mockImplementation(() => false);
