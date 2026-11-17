@@ -15,7 +15,10 @@ export const microAppRuntime = createMicroAppRuntime((definition) => {
 });
 
 export function reportMicroAppError(error: unknown): void {
-  console.error('[micro-app] 生命周期操作失败', error);
+  Reflect.apply(console.error, console, [
+    '[micro-app] 生命周期操作失败',
+    error instanceof Error ? error.message : '未知错误',
+  ]);
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -38,7 +41,7 @@ export function cleanupMicroAppRuntime(): Promise<void> {
   return work;
 }
 
-/** 真正卸载活动及空闲实例，等待清理完成；保留登录态订阅供后续会话使用。 */
+/** 真正卸载活动及卸载失败实例，等待清理完成；保留登录态订阅供后续会话使用。 */
 export function disposeGarfishRuntimeCache(): Promise<void> {
   return cleanupMicroAppRuntime();
 }

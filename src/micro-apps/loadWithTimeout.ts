@@ -1,3 +1,4 @@
+import { RefreshRequiredError } from './diagnostics';
 /** 超时只结束等待，不代表底层请求已取消；晚到结果单独清理。 */
 export function loadWithTimeout<T>(
   load: Promise<T>,
@@ -8,7 +9,7 @@ export function loadWithTimeout<T>(
     let timedOut = false;
     const timer = window.setTimeout(() => {
       timedOut = true;
-      reject(new Error('子应用加载超时，请重试'));
+      reject(new RefreshRequiredError('子应用加载超时，请刷新主应用后重试'));
     }, timeoutMs);
     void load.then(
       (result) => {

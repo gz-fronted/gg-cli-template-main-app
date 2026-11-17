@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 /**
  * 路由配置 (React Router Data API)
  * 采用对象配置模式，便于管理和扩展
@@ -37,9 +38,11 @@ const Loading = () => (
 // 包装懒加载组件，统一添加 Suspense
 function withSuspense(Component: LazyExoticComponent<ComponentType<any>>) {
   return (
-    <Suspense fallback={<Loading />}>
-      <Component />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<Loading />}>
+        <Component />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
