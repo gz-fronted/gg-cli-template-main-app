@@ -1,0 +1,47 @@
+[
+  {
+    "cycle": 5,
+    "heap": {
+      "usedSize": 30136360,
+      "totalSize": 32227328,
+      "embedderHeapUsedSize": 7555464,
+      "backingStorageSize": 9438612
+    },
+    "stats": {
+      "mount": 18,
+      "destroy": 18,
+      "listeners": 0,
+      "panels": 0
+    }
+  },
+  {
+    "cycle": 15,
+    "heap": {
+      "usedSize": 30645316,
+      "totalSize": 33538048,
+      "embedderHeapUsedSize": 8358480,
+      "backingStorageSize": 9437928
+    },
+    "stats": {
+      "mount": 28,
+      "destroy": 28,
+      "listeners": 0,
+      "panels": 0
+    }
+  },
+  {
+    "cycle": 30,
+    "heap": {
+      "usedSize": 30763392,
+      "totalSize": 33538048,
+      "embedderHeapUsedSize": 9994688,
+      "backingStorageSize": 9437928
+    },
+    "stats": {
+      "mount": 43,
+      "destroy": 43,
+      "listeners": 0,
+      "panels": 0
+    }
+  }
+]

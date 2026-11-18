@@ -1,3 +1,4 @@
+import { registerPreloadErrorLogger } from '@/components/ErrorBoundary/resourceLoadError';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { ConfigProvider } from 'gz-ui-web';
@@ -7,6 +8,7 @@ import './style.less';
 import { disposeMicroApps, initializeMicroApps, reportMicroAppError } from '@/micro-apps/bootstrap';
 
 initializeMicroApps();
+const removePreloadLogger = registerPreloadErrorLogger();
 
 const root = createRoot(document.getElementById('root')!);
 root.render(
@@ -17,6 +19,7 @@ root.render(
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    removePreloadLogger();
     root.unmount();
     router.dispose();
     void disposeMicroApps().catch(reportMicroAppError);

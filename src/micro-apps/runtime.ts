@@ -1,5 +1,6 @@
 import Garfish from 'garfish';
 import { loadWithTimeout } from './loadWithTimeout';
+import { recordLifecycle, RefreshRequiredError } from './diagnostics';
 
 type GarfishApp = NonNullable<Awaited<ReturnType<typeof Garfish.loadApp>>>;
 
@@ -23,21 +24,36 @@ function createDomGetter(target: RuntimeSlot['target'], hostId: string) {
 }
 
 export interface MicroAppRuntimeOptions {
-  maxIdleSlots?: number;
   maxTotalSlots?: number;
   loadTimeoutMs?: number;
 }
 
-/** hide/show 保留模块运行时；只有空闲池淘汰、会话切换和入口销毁才真正 unmount。 */
+/** 页面关闭时完整卸载；失败残留和在途加载继续占用容量。 */
 export function createMicroAppRuntime(
   getProps: (definition: MicroAppDefinition) => Record<string, unknown>,
-  { maxIdleSlots = 5, maxTotalSlots = 15, loadTimeoutMs = 30_000 }: MicroAppRuntimeOptions = {},
+  { maxTotalSlots = 15, loadTimeoutMs = 30_000 }: MicroAppRuntimeOptions = {},
 ) {
   const slots = new Set<RuntimeSlot>();
   const pendingLoads = new Map<string, Promise<GarfishApp | null>>();
   let queue: Promise<void> = Promise.resolve();
   let sessionVersion = 0;
   let disposal: Promise<void> | undefined;
+  let blocked = false;
+
+  // 只限制调用方等待时间，不放开底层队列，避免与未结束的 mount 并发。
+  function observe<T>(work: Promise<T>, onTimeout: () => void, name: string): Promise<T> {
+    const started = Date.now();
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        blocked = true;
+        onTimeout();
+        recordLifecycle(name, 'timeout', Date.now() - started);
+        reject(new RefreshRequiredError('子应用操作超时，请刷新主应用后重试'));
+      }, loadTimeoutMs);
+    });
+    return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+  }
 
   // Garfish 会合并同名 loadApp 请求，生命周期串行后不同宿主才不会抢到同一实例。
   function enqueue<T>(task: () => T | Promise<T>): Promise<T> {
@@ -59,6 +75,7 @@ export function createMicroAppRuntime(
         throw new Error('子应用仍被框架持有，资源尚未释放');
       }
       slots.delete(slot);
+      recordLifecycle('runtime', 'unmounted');
     } finally {
       slot.target.host = null;
       slot.owner = null;
@@ -66,66 +83,50 @@ export function createMicroAppRuntime(
     }
   }
 
-  function park(slot: RuntimeSlot): void {
-    if (slot.app.display && !slot.app.hide()) throw new Error('子应用隐藏失败');
-    slot.target.host = null;
-    slot.owner = null;
-    slot.app.appInfo.props = {};
-    // 最近停靠的排在末尾，超过上限时优先淘汰最早停靠的空闲实例。
-    slots.delete(slot);
-    slots.add(slot);
-    const idle = [...slots].filter((item) => !item.owner && !item.failed);
-    for (const item of idle.slice(0, Math.max(0, idle.length - maxIdleSlots))) {
-      try {
-        remove(item);
-      } catch (error) {
-        console.error('[micro-app] 空闲实例淘汰失败', error);
-      }
-    }
-  }
-
   function reserveCapacity(): void {
-    for (const slot of [...slots]) {
-      if (slots.size + pendingLoads.size < maxTotalSlots) return;
-      if (slot.owner || slot.failed) continue;
-      try {
-        remove(slot);
-      } catch (error) {
-        console.error('[micro-app] 容量回收失败', error);
-      }
-    }
     if (slots.size + pendingLoads.size >= maxTotalSlots) {
-      throw new Error('子应用运行时容量已满，请保存工作后刷新主应用');
+      throw new RefreshRequiredError('子应用运行时容量已满，请刷新主应用');
     }
   }
 
   function attach(definition: MicroAppDefinition, host: HTMLElement) {
+    // 封锁后不再向阻塞队列追加任务，也不为拒绝的挂载保留宿主或安排清理。
+    if (blocked) {
+      return {
+        ready: Promise.reject<void>(new RefreshRequiredError()),
+        release: () => Promise.resolve(),
+      };
+    }
     const owner = Symbol(definition.name);
     const version = sessionVersion;
     let cancelled = false;
     let slot: RuntimeSlot | undefined;
     const isCurrent = () => !cancelled && version === sessionVersion && host.isConnected;
 
-    const ready = enqueue(async () => {
+    recordLifecycle(definition.name, 'queued');
+    const work = enqueue(async () => {
+      if (blocked) throw new RefreshRequiredError();
       if (!isCurrent()) return;
       const entry = definition.entry.trim();
       if (!entry) throw new Error('未配置子应用入口地址');
       const key = JSON.stringify([definition.name, definition.basename, entry]);
-      slot = [...slots].find((item) => item.key === key && !item.owner && !item.failed);
+
       try {
         if (!slot) {
           // Garfish 会把同名在途请求合并；超时重试不能接回旧请求的晚到实例。
-          if (pendingLoads.has(definition.name)) throw new Error('子应用仍在加载，请稍后重试');
+          if (pendingLoads.has(definition.name))
+            throw new RefreshRequiredError('子应用仍在加载，请刷新主应用后重试');
           reserveCapacity();
-          // 闭包只保留可清空的槽位，停靠后不继续引用旧 React 宿主 DOM。
+          // 闭包只保留可清空的槽位，释放后不继续引用旧 React 宿主 DOM。
           const target = { host: host as HTMLElement | null };
+          recordLifecycle(definition.name, 'resources');
           const pending = Garfish.loadApp(definition.name, {
             entry,
             basename: definition.basename,
             sandbox: false,
             cache: false,
             domGetter: createDomGetter(target, host.id),
-            // 资源加载阶段不持有登录态，实际执行 mount/show 前再注入。
+            // 资源加载阶段不持有登录态，实际执行 mount 前再注入。
             props: {},
           });
           const tracked = pending.finally(() => {
@@ -149,46 +150,54 @@ export function createMicroAppRuntime(
         slot.target.host = host;
         slot.owner = owner;
         if (isCurrent()) {
-          // 每次 mount/show 都读取当前登录态，避免复用启动时的 token 快照。
+          // 每次 mount 都读取当前登录态，避免复用启动时的 token 快照。
           slot.app.appInfo.props = getProps(definition);
-          const success = slot.app.mounted ? await slot.app.show() : await slot.app.mount();
+          recordLifecycle(definition.name, 'mount');
+          const success = await slot.app.mount();
           if (!success) throw new Error('子应用挂载失败');
         }
         if (!isCurrent()) {
-          if (version !== sessionVersion) remove(slot);
-          else park(slot);
+          remove(slot);
+        } else {
+          recordLifecycle(definition.name, 'ready');
         }
       } catch (error) {
         if (slot) {
           try {
             remove(slot);
-          } catch (cleanupError) {
-            throw new AggregateError([error, cleanupError], '子应用操作及清理失败');
+          } catch {
+            recordLifecycle(definition.name, 'error');
+            throw new RefreshRequiredError('子应用操作及清理失败，请刷新主应用后重试');
           }
         }
+        recordLifecycle(definition.name, 'error');
         throw error;
       }
     });
+
+    const ready = observe(
+      work,
+      () => {
+        cancelled = true;
+      },
+      definition.name,
+    );
 
     return {
       ready,
       release: () => {
         cancelled = true;
-        return enqueue(() => {
+        const release = enqueue(() => {
           try {
             if (slot?.owner === owner) {
-              try {
-                park(slot);
-              } catch (error) {
-                remove(slot);
-                throw error;
-              }
+              remove(slot);
             }
           } finally {
-            // release 句柄不再持有已停靠或已淘汰的槽位。
+            // release 句柄不再持有已卸载的槽位。
             slot = undefined;
           }
         });
+        return observe(release, () => undefined, definition.name);
       },
     };
   }
@@ -209,7 +218,7 @@ export function createMicroAppRuntime(
       if (pendingLoads.size) errors.push(new Error('仍有超时的底层加载未返回'));
       if (errors.length) throw new AggregateError(errors, '子应用运行时清理失败');
     });
-    const tracked = work.finally(() => {
+    const tracked = observe(work, () => undefined, 'dispose').finally(() => {
       if (disposal === tracked) disposal = undefined;
     });
     disposal = tracked;

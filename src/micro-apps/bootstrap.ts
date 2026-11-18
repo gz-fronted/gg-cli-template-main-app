@@ -1,3 +1,5 @@
+import { hostBridge } from '@/integration/host-bridge/hostBridge';
+import { useMicroAppTabs } from './tabs';
 import Garfish from 'garfish';
 import { create } from 'zustand';
 import { useGlobalStore } from '@/store/useGlobalStore';
@@ -9,13 +11,29 @@ export const reactMicroApp: MicroAppDefinition = {
   entry: import.meta.env.VITE_MICRO_APP_REACT_ENTRY ?? '',
 };
 
+export const microAppDefinitions = [reactMicroApp];
+
 export const microAppRuntime = createMicroAppRuntime((definition) => {
   const { user, token } = useGlobalStore.getState();
-  return { globalState: { user, token, basename: definition.basename, contentOnly: true } };
+  return {
+    globalState: {
+      user,
+      token,
+      basename: definition.basename,
+      appId: definition.name,
+      routePath:
+        useMicroAppTabs.getState().tabs.find((tab) => tab.definition.name === definition.name)
+          ?.routePath ?? '/',
+      contentOnly: true,
+    },
+  };
 });
 
 export function reportMicroAppError(error: unknown): void {
-  console.error('[micro-app] 生命周期操作失败', error);
+  Reflect.apply(console.error, console, [
+    '[micro-app] 生命周期操作失败',
+    error instanceof Error ? error.message : '未知错误',
+  ]);
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -38,7 +56,7 @@ export function cleanupMicroAppRuntime(): Promise<void> {
   return work;
 }
 
-/** 真正卸载活动及空闲实例，等待清理完成；保留登录态订阅供后续会话使用。 */
+/** 真正卸载活动及卸载失败实例，等待清理完成；保留登录态订阅供后续会话使用。 */
 export function disposeGarfishRuntimeCache(): Promise<void> {
   return cleanupMicroAppRuntime();
 }
@@ -49,12 +67,15 @@ export function initializeMicroApps(): void {
   if (!Garfish.running) Garfish.run({ basename: '/', disablePreloadApp: true });
   unsubscribe = useGlobalStore.subscribe((state, previous) => {
     if (state.token !== previous.token || state.user !== previous.user) {
+      hostBridge.clearSubAppTargets();
+      useMicroAppTabs.getState().reset();
       void cleanupMicroAppRuntime().catch(reportMicroAppError);
     }
   });
 }
 
 export function disposeMicroApps(): Promise<void> {
+  hostBridge.stop();
   unsubscribe?.();
   unsubscribe = undefined;
   return cleanupMicroAppRuntime();

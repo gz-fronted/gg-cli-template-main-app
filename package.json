@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
-    "ag-grid-community": "^36.0.1",
-    "ag-grid-enterprise": "^36.0.1",
-    "ag-grid-react": "^36.0.1",
+    "ag-grid-community": "36.0.1",
+    "ag-grid-enterprise": "36.0.1",
+    "ag-grid-react": "36.0.1",
     "antd": "^6.3.3",
     "axios": "^1.13.6",
     "echarts": "^6.0.0",

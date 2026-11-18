@@ -1,3 +1,5 @@
+import { microAppDefinitions } from '@/micro-apps/bootstrap';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 /**
  * 路由配置 (React Router Data API)
  * 采用对象配置模式，便于管理和扩展
@@ -17,7 +19,6 @@ const Workspace = lazy(() => import('@/pages/workspace'));
 const Calendar = lazy(() => import('@/pages/calendar'));
 const Settings = lazy(() => import('@/pages/settings'));
 const NotFound = lazy(() => import('@/pages/404'));
-const MicroApp = lazy(() => import('@/pages/micro-app'));
 
 // 全局 Loading 组件
 const Loading = () => (
@@ -35,18 +36,20 @@ const Loading = () => (
 );
 
 // 包装懒加载组件，统一添加 Suspense
-function withSuspense(Component: LazyExoticComponent<ComponentType<any>>) {
+function withSuspense(Component: LazyExoticComponent<ComponentType<any>>, pageKey: string) {
   return (
-    <Suspense fallback={<Loading />}>
-      <Component />
-    </Suspense>
+    <ErrorBoundary key={pageKey}>
+      <Suspense fallback={<Loading />}>
+        <Component />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: withSuspense(Login),
+    element: withSuspense(Login, 'login'),
   },
   {
     path: '/',
@@ -60,37 +63,34 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true, // 默认子路由 (首页)
-        element: withSuspense(Home),
+        element: withSuspense(Home, 'home'),
       },
       {
         path: 'dashboard',
-        element: withSuspense(Dashboard),
+        element: withSuspense(Dashboard, 'dashboard'),
       },
       {
         path: 'about',
-        element: withSuspense(About),
+        element: withSuspense(About, 'about'),
       },
       {
         path: 'workspace',
-        element: withSuspense(Workspace),
+        element: withSuspense(Workspace, 'workspace'),
       },
       {
         path: 'calendar',
-        element: withSuspense(Calendar),
+        element: withSuspense(Calendar, 'calendar'),
       },
       {
         path: 'settings',
-        element: withSuspense(Settings),
+        element: withSuspense(Settings, 'settings'),
       },
       // 子应用路由：匹配所有 /micro-react-1 及之后的路径
-      {
-        path: 'micro-react-1/*',
-        element: withSuspense(MicroApp),
-      },
+      ...microAppDefinitions.map((app) => ({ path: `${app.basename.slice(1)}/*`, element: null })),
       // 404 页面配置
       {
         path: '*',
-        element: withSuspense(NotFound),
+        element: withSuspense(NotFound, 'not-found'),
       },
     ],
   },

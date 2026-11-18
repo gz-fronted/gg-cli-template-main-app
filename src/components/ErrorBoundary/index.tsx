@@ -1,3 +1,4 @@
+import { isResourceLoadError, reloadPage } from './resourceLoadError';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Result, Button } from 'antd';
 
@@ -50,18 +51,21 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const resourceError = isResourceLoadError(this.state.error);
       return (
         <Result
           status="500"
           title="抱歉，页面加载出错了"
           subTitle={
-            import.meta.env.DEV
-              ? this.state.error?.message
-              : "我们正在努力修复此问题，请稍后再试。"
+            resourceError
+              ? '页面资源加载失败，请刷新页面。未保存内容可能丢失。'
+              : import.meta.env.DEV
+                ? this.state.error?.message
+                : '我们正在努力修复此问题，请稍后再试。'
           }
           extra={
-            <Button type="primary" onClick={this.handleReset}>
-              重试
+            <Button type="primary" onClick={resourceError ? reloadPage : this.handleReset}>
+              {resourceError ? '刷新页面' : '重试'}
             </Button>
           }
           style={{

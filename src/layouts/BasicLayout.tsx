@@ -1,3 +1,6 @@
+import MicroAppTabs from '@/components/MicroAppTabs';
+import { microAppDefinitions } from '@/micro-apps/bootstrap';
+import { matchMicroApp } from '@/micro-apps/routes';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Layout, Menu, Avatar, Badge, Space, Typography, Button } from 'antd';
 import {
@@ -31,11 +34,11 @@ const MENU_ITEMS = [
     icon: <AppstoreOutlined />,
     label: '功能大厅',
   },
-  {
-    key: '/micro-react-1',
+  ...microAppDefinitions.map((app) => ({
+    key: app.basename,
     icon: <AppstoreOutlined />,
-    label: 'React19 子应用',
-  },
+    label: app.name,
+  })),
   {
     key: '/workspace', // 暂未实现
     icon: <FolderOutlined />,
@@ -121,7 +124,14 @@ export default function BasicLayout() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <Menu
               mode="inline"
-              selectedKeys={[location.pathname]}
+              selectedKeys={[
+                matchMicroApp(
+                  location.pathname,
+                  location.search,
+                  location.hash,
+                  microAppDefinitions,
+                )?.definition.basename ?? location.pathname,
+              ]}
               style={{ borderRight: 0, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}
               items={MENU_ITEMS}
               onClick={({ key }) => navigate(key)}
@@ -174,7 +184,13 @@ export default function BasicLayout() {
             borderRadius: 8,
           }}
         >
-          <Outlet />
+          <MicroAppTabs />
+          {!matchMicroApp(
+            location.pathname,
+            location.search,
+            location.hash,
+            microAppDefinitions,
+          ) && <Outlet />}
         </Content>
       </Layout>
     </Layout>
